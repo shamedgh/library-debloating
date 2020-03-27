@@ -1,7 +1,7 @@
 import sys
 import os
 
-sys.path.insert(0, '/home/hamed/container-debloating')
+sys.path.insert(0, './python-utils/')
 
 import util
 import graph
@@ -121,3 +121,26 @@ class Piecewise:
         accessibleSyscalls.update(librarySyscalls)
         self.logger.info("Accessible system calls after adding libraries without cfg: %d, %s", len(accessibleSyscalls), str(accessibleSyscalls))
         return accessibleSyscalls
+
+    def extractAccessibleSystemCallsFromIndirectFunctions(self, directCfg, separator, exceptList=list()):
+        indirectFunctionToSyscallMap = dict()
+
+        tempGraph = graph.Graph(self.logger)
+        result = tempGraph.createGraphFromInput(self.binaryCfgPath)
+        indirectFunctions = tempGraph.extractIndirectOnlyFunctions(directCfg, separator)
+        completeGraph, librarySyscalls, libraryCfgGraphs, libcGraph = self.createCompleteGraph(exceptList)
+
+        for startNode in indirectFunctions:
+            accessibleFuncs = set()
+            allVisitedNodes = set()
+            accessibleSyscalls = set()
+            self.logger.debug("Iterating indirect-only function: %s", startNode)
+            accessibleFuncs.update(completeGraph.getLeavesFromStartNode(startNode, list(), list(indirectFunctions)))
+
+            for accessibleFunc in accessibleFuncs:
+                self.logger.debug("Iterating accessible function: %s", accessibleFunc)
+                currentSyscalls, currentVisitedNodes = libcGraph.getSyscallFromStartNodeWithVisitedNodes(accessibleFunc)
+                accessibleSyscalls.update(currentSyscalls)
+                allVisitedNodes.update(currentVisitedNodes)
+            indirectFunctionToSyscallMap[startNode] = accessibleSyscalls
+        return indirectFunctionToSyscallMap
