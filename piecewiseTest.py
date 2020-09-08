@@ -4,6 +4,10 @@ import optparse
 
 import piecewise
 
+sys.path.insert(0, './python-utils/')
+
+import util
+
 def isValidOpts(opts):
     if ( not opts.binarypath or not opts.binarycfgpath or not opts.libccfgpath or not opts.otherlibcfgpath ):
         parser.error("All options --binarypath, --binarycfgpath, --libccfgpath and --otherlibcfgpath should be provided.")
@@ -58,6 +62,15 @@ if __name__ == '__main__':
     parser.add_option("", "--startfunc", dest="startfunc", default="main", nargs=1,
                       help="Function starting point")
 
+    parser.add_option("", "--printpaths", dest="printpaths", action="store_true", default=False,
+                      help="Print all paths between the start function and target function")
+
+    parser.add_option("", "--targetfunc", dest="targetfunc", default="main", nargs=1,
+                      help="Target function")
+
+    parser.add_option("", "--exceptlist", dest="exceptlist", default=None, nargs=1,
+                      help="Exception list")
+
     parser.add_option("-d", "--debug", dest="debug", action="store_true", default=False,
                       help="Debug enabled/disabled")
 
@@ -71,4 +84,12 @@ if __name__ == '__main__':
             startFuncs = startFuncsStr.split(",")
         else:
             startFuncs.append(startFuncsStr)
-        myPiecewise.extractAccessibleSystemCalls(startFuncs)
+        if ( options.printpaths and options.targetfunc ):
+            exceptList = list()
+            if ( options.exceptlist ):
+                exceptList = util.convertStrListToList(options.exceptlist)
+            completeGraph, librarySyscalls, libraryCfgGraphs, libcGraph = myPiecewise.createCompleteGraph(exceptList)
+            allPaths = completeGraph.printAllPaths(options.startfunc, options.targetfunc)
+            rootLogger.info("allPaths: %s", allPaths)
+        else:
+            myPiecewise.extractAccessibleSystemCalls(startFuncs)
