@@ -221,25 +221,16 @@ class Piecewise:
         return completeGraph, librarySyscalls, libraryCfgGraphs
 
     def extractAccessibleSystemCallsFromBinary(self, startNodes, exceptList=list()):
+        self.logger.info("Extracting acessible system calls from binary")
         completeGraph, librarySyscalls, libraryCfgGraphs = self.createCompleteGraphWithoutBinary(exceptList)
 
-        accessibleFuncs = set()
-        allVisitedNodes = set()
         accessibleSyscalls = set()
         for startNode in startNodes:
             self.logger.debug("Iterating startNode: %s", startNode)
-            # accessibleFuncs.update(completeGraph.getLeavesFromStartNode(startNode, list(), list()))
-            currentSyscalls, currentVisistedNodes = completeGraph.getSyscallsFromStartNode(startNode)
+            currentSyscalls = completeGraph.getSyscallFromStartNode(startNode)
             accessibleSyscalls.update(currentSyscalls)
-            allVisitedNodes.update(currentVisistedNodes)
 
-        # for accessibleFunc in accessibleFuncs:
-        #     self.logger.debug("Iterating accessible function: %s", accessibleFunc)
-        #     currentSyscalls, currentVisitedNodes = completeGraph.getSyscallFromStartNodeWithVisitedNodes(accessibleFunc)
-        #     accessibleSyscalls.update(currentSyscalls)
-        #     allVisitedNodes.update(currentVisitedNodes)
-
-        # self.logger.info("Accessible system calls after library specialization: %d, %s", len(accessibleSyscalls), str(accessibleSyscalls))
+        self.logger.info("Accessible system calls after library specialization: %d, %s", len(accessibleSyscalls), str(accessibleSyscalls))
         self.logger.info("len(librarySyscalls): %d", len(librarySyscalls))
         accessibleSyscalls.update(librarySyscalls)
         self.logger.info("Accessible system calls after adding libraries without cfg: %d, %s", len(accessibleSyscalls), str(accessibleSyscalls))
