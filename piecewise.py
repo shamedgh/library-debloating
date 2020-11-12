@@ -145,7 +145,7 @@ class Piecewise:
             indirectFunctionToSyscallMap[startNode] = accessibleSyscalls
         return indirectFunctionToSyscallMap
 
-    def createCompleteGraphWithoutBinary(self, exceptList=list()):
+    def createCompleteGraphWithoutBinary(self, exceptList=list(), altLibPath=None):
         '''TODO
         1. Extract required libraries from binary (ldd)
         2. Find call graph for each library from specified folder (input: callgraph folder)
@@ -178,6 +178,7 @@ class Piecewise:
             libraryCfgFileName = self.cleanLib(libraryName) + ".callgraph.out"
             libraryCfgFilePath = self.cfgPath + "/" + libraryCfgFileName
             if ( libraryName not in libcRelatedList and libraryName not in exceptList ):
+                altBinaryPath = self.existsInAltPath(libraryName, altLibPath)
                 if ( os.path.isfile(libraryCfgFilePath) ):
                     #We have the CFG for this library
                     self.logger.info("The library call graph exists for: %s", libraryName)
@@ -204,10 +205,12 @@ class Piecewise:
                             #libraryStartToEndGraph.addEdge(startNode, leaf)
                             completeGraph.addEdge(startNode, leaf)
                     #libraryGraphs[libraryName] = libraryStartToEndGraph
-                elif ( os.path.isfile(libPath) ):
+                elif ( os.path.isfile(libPath) or altBinaryPath ):
                     #We don't have the CFG for this library, all exported functions will be considered as starting nodes in our final graph
                     self.logger.info("The library call graph doesn't exist, considering all imported functions for: %s", libraryName)
-                    libraryProfiler = binaryAnalysis.BinaryAnalysis(libPath, self.logger)
+                    path = libPath if os.path.isfile(libPath) else altBinaryPath
+                    self.logger.info("path: %s", path)
+                    libraryProfiler = binaryAnalysis.BinaryAnalysis(path, self.logger)
                     directSyscallSet, successCount, failedCount  = libraryProfiler.extractDirectSyscalls()
                     indirectSyscallSet = libraryProfiler.extractIndirectSyscalls(completeGraph)
 
@@ -220,9 +223,9 @@ class Piecewise:
 
         return completeGraph, librarySyscalls, libraryCfgGraphs
 
-    def extractAccessibleSystemCallsFromBinary(self, startNodes, exceptList=list()):
+    def extractAccessibleSystemCallsFromBinary(self, startNodes, exceptList=list(), altLibPath=None):
         self.logger.info("Extracting acessible system calls from binary")
-        completeGraph, librarySyscalls, libraryCfgGraphs = self.createCompleteGraphWithoutBinary(exceptList)
+        completeGraph, librarySyscalls, libraryCfgGraphs = self.createCompleteGraphWithoutBinary(exceptList, altLibPath)
 
         accessibleSyscalls = set()
         for startNode in startNodes:
@@ -236,3 +239,26 @@ class Piecewise:
         self.logger.info("Accessible system calls after adding libraries without cfg: %d, %s", len(accessibleSyscalls), str(accessibleSyscalls))
         return accessibleSyscalls
         
+    # checks if the library exists in the specified alternate path
+    def existsInAltPath(self, libraryName, altLibPath):
+        if altLibPath is None:
+            return None
+
+        contents = os.listdir(altLibPath)
+
+        for c in contents:
+            if c.find(libraryName) != -1:
+                return os.path.abspath(altLibPath) + "/" + c
+
+        return None
+
+    # def getAltBinaryPath(self, libraryName, altLibPath):
+    #     library = ""
+
+    #     contents = os.listdir(altLibPath)
+
+    #     for c in contents:
+    #         if c.find(libraryName) != -1:
+    #             return True
+
+    #     return os.path.abspath(altLibPath) + "/" + libraryName
