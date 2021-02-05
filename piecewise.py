@@ -189,11 +189,14 @@ class Piecewise:
             self.logger.error("Failed to create graph for input: %s", self.libcCfgPath)
             sys.exit(-1)
 
+        libWithCallgraphSet = set()
         # Fixing bug: should create callgraph first, then extract start nodes and find accessible system calls        
         for libraryName, libPath in libraryToPathDict.items():
             if ( ".so" in libPath ):
                 self.logger.info("Checking library: %s", libraryName)
                 libraryFullName = libraryName
+                libraryCfgVersionedFileName = libraryFullName + ".callgraph.out"
+                libraryCfgVersionedFilePath = self.cfgPath + "/" + libraryCfgVersionedFileName
                 libraryCfgFileName = self.cleanLib(libraryName) + ".callgraph.out"
                 libraryCfgFilePath = self.cfgPath + "/" + libraryCfgFileName
                 libraryName = self.cleanLib(libraryName)
@@ -201,7 +204,13 @@ class Piecewise:
                     #altBinaryPath = self.existsInAltPath(libraryName, altLibPath)  #Using the cleaned version causes problem for libapr
                     altBinaryPath = self.existsInAltPath(libraryFullName, altLibPath)
                     if ( os.path.isfile(libraryCfgFilePath) ):
+
+                        if ( os.path.isfile(libraryCfgVersionedFilePath) ):
+                            libraryCfgFilePath = libraryCfgVersionedFilePath
+                        else:
+                            self.logger.warning("The library callgraph exists, but the version does not match: %s", libraryCfgVersionedFileName)
                         #We have the CFG for this library
+                        libWithCallgraphSet.add(libraryName)
                         self.logger.info("The library call graph exists for: %s", libraryName)
 
                         libraryGraph = graph.Graph(self.logger)
@@ -240,7 +249,7 @@ class Piecewise:
                 libraryCfgFileName = self.cleanLib(libraryName) + ".callgraph.out"
                 libraryCfgFilePath = self.cfgPath + "/" + libraryCfgFileName
                 libraryName = self.cleanLib(libraryName)
-                if ( libraryName not in libcRelatedList and libraryName not in exceptList ):
+                if ( libraryName not in libWithCallgraphSet and libraryName not in libcRelatedList and libraryName not in exceptList ):
                     #altBinaryPath = self.existsInAltPath(libraryName, altLibPath)  #Using the cleaned version causes problem for libapr
                     altBinaryPath = self.existsInAltPath(libraryFullName, altLibPath)
                     if ( os.path.isfile(libPath) or altBinaryPath ):
