@@ -194,7 +194,10 @@ class Piecewise:
         for libraryName, libPath in libraryToPathDict.items():
             if ( ".so" in libPath ):
                 self.logger.info("Checking library: %s", libraryName)
-                libraryFullName = libraryName
+                if libPath == "not found":
+                    libraryFullName = altBinaryPath.strip().split("/")[-1]
+                else:
+                    libraryFullName = libPath.strip().split("/")[-1]
                 libraryCfgVersionedFileName = libraryFullName + ".callgraph.out"
                 libraryCfgVersionedFilePath = self.cfgPath + "/" + libraryCfgVersionedFileName
                 libraryCfgFileName = self.cleanLib(libraryName) + ".callgraph.out"
