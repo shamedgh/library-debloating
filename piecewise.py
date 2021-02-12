@@ -9,6 +9,7 @@ import graph
 import binaryAnalysis
 
 class Piecewise:
+    libcStartNodes = ['_start', '__libc_start_main', '__libc_csu_init', 'preinit_array_start', '_init', '_dl_start', '_dl_start_final', '_dl_sysdep_start', '__mach_init', '_hurd_startup', 'dl_main', '_dl_allocate_tls_init', '_dl_start_user', '_dl_init_first', '_dl_start_user']
     """
     This class can be used to perform debloating based on the piece-wise paper (they should've released and extendable code, but didn't)
     """
@@ -19,6 +20,9 @@ class Piecewise:
         self.cfgPath = cfgPath
         self.libcSeparator = cfginputseparator
         self.logger = logger
+
+    def getLibcStartNodes(self):
+        return Piecewise.libcStartNodes
 
     def cleanLib(self, libName):
         self.logger.debug("cleanLib libName input: %s", libName)
@@ -104,6 +108,7 @@ class Piecewise:
         return completeGraph, librarySyscalls, libraryCfgGraphs, libcGraph
 
     def extractAccessibleSystemCalls(self, startNodes, exceptList=list()):
+        startNodes.update(Piecewise.libcStartNodes)
         completeGraph, librarySyscalls, libraryCfgGraphs, libcGraph = self.createCompleteGraph(exceptList)
 
         accessibleFuncs = set()
@@ -276,6 +281,7 @@ class Piecewise:
         return completeGraph, librarySyscalls, libraryCfgGraphs
 
     def extractAccessibleSystemCallsFromBinary(self, startNodes, exceptList=list(), altLibPath=None, procLibraryDict=dict()):
+        startNodes.update(Piecewise.libcStartNodes)
         self.logger.info("Extracting acessible system calls from binary")
         completeGraph, librarySyscalls, libraryCfgGraphs = self.createCompleteGraphWithoutBinary(exceptList, altLibPath, procLibraryDict)
 
