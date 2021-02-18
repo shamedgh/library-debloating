@@ -280,8 +280,9 @@ class Piecewise:
 
         return completeGraph, librarySyscalls, libraryCfgGraphs
 
-    def extractAccessibleSystemCallsFromBinary(self, startNodes, exceptList=list(), altLibPath=None, procLibraryDict=dict()):
-        startNodes.update(Piecewise.libcStartNodes)
+    def extractAccessibleSystemCallsFromBinary(self, startNodes, exceptList=list(), altLibPath=None, procLibraryDict=dict(), addLibcStartNodes=True):
+        if ( addLibcStartNodes ):
+            startNodes.update(Piecewise.libcStartNodes)
         self.logger.info("Extracting acessible system calls from binary")
         completeGraph, librarySyscalls, libraryCfgGraphs = self.createCompleteGraphWithoutBinary(exceptList, altLibPath, procLibraryDict)
 
