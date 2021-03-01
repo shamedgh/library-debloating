@@ -180,7 +180,8 @@ class Piecewise:
             libraryToPathDict = procLibraryDict
             self.logger.debug("library debloating createCompleteGraphWithoutBinary library name and path received, no need for ldd")
         else:
-            libraryToPathDict = util.readLibrariesWithLdd(self.binaryPath)
+            libraryToPathDict = util.readLibrariesWithLddWithFullname(self.binaryPath)
+        #dict format: libraryName (with version and .so) -> libFullPath (might be not found if ldd is used)
 
         startNodeToLibDict = dict()
 
@@ -197,12 +198,22 @@ class Piecewise:
         libWithCallgraphSet = set()
         # Fixing bug: should create callgraph first, then extract start nodes and find accessible system calls        
         for libraryName, libPath in libraryToPathDict.items():
-            if ( ".so" in libPath ):
-                self.logger.info("Checking library: %s", libraryName)
-                if libPath == "not found":
-                    libraryFullName = altBinaryPath.strip().split("/")[-1]
-                else:
-                    libraryFullName = libPath.strip().split("/")[-1]
+            self.logger.debug("createCompleteGraphWithoutBinary: iterating over libName: %s libPath: %s", libraryName, libPath)
+            libPathInAlt = self.existsInAltPath(libraryName, altLibPath)
+            if ( libPathInAlt ):
+                libPath = libPathInAlt#.strip().split("/")[-1]
+            else:
+                self.logger.error("Didn't find library: %s in altpath either. Using system library or skipping!", libraryName)
+            if ( ".so" in libraryName ):
+                self.logger.info("Checking library: %s with path: %s", libraryName, libPath)
+
+                ### Modified readLibsWithLdd to return full library name with version
+                #altBinaryPath = self.existsInAltPath(libraryName, altLibPath)
+                #if libPath == "not found":
+                #    libraryFullName = altBinaryPath.strip().split("/")[-1]
+                #else:
+                #    libraryFullName = libPath.strip().split("/")[-1]
+                libraryFullName = libraryName
                 libraryCfgVersionedFileName = libraryFullName + ".callgraph.out"
                 libraryCfgVersionedFilePath = self.cfgPath + "/" + libraryCfgVersionedFileName
                 libraryCfgFileName = self.cleanLib(libraryName) + ".callgraph.out"
@@ -210,13 +221,17 @@ class Piecewise:
                 libraryName = self.cleanLib(libraryName)
                 if ( libraryName not in libcRelatedList and libraryName not in exceptList ):
                     #altBinaryPath = self.existsInAltPath(libraryName, altLibPath)  #Using the cleaned version causes problem for libapr
-                    altBinaryPath = self.existsInAltPath(libraryFullName, altLibPath)
+                    #if ( libPath == "not found" or libPath == "" ):
+                    #    self.logger.debug("libPath: %s", libPath)
+                    #    altBinaryPath = self.existsInAltPath(libraryFullName, altLibPath)
+                    #else:
+                    #    altBinaryPath = libPath
                     if ( os.path.isfile(libraryCfgFilePath) ):
 
-                        if ( os.path.isfile(libraryCfgVersionedFilePath) ):
-                            libraryCfgFilePath = libraryCfgVersionedFilePath
-                        else:
-                            self.logger.warning("The library callgraph exists, but the version does not match: %s", libraryCfgVersionedFileName)
+                        ###if ( os.path.isfile(libraryCfgVersionedFilePath) ):
+                        ###    libraryCfgFilePath = libraryCfgVersionedFilePath
+                        ###else:
+                        ###    self.logger.warning("The library callgraph exists, but the version does not match: %s", libraryCfgVersionedFileName)
                         #We have the CFG for this library
                         libWithCallgraphSet.add(libraryName)
                         self.logger.info("The library call graph exists for: %s", libraryName)
@@ -224,7 +239,8 @@ class Piecewise:
                         libraryGraph = graph.Graph(self.logger)
                         libraryGraph.createGraphFromInput(libraryCfgFilePath)
                         self.logger.info("Finished create graph object for library: %s", libraryName)
-                        libraryStartNodes = libraryGraph.extractStartingNodes()
+                        #libraryStartNodes = libraryGraph.extractStartingNodes()
+                        libraryStartNodes = util.extractExportedFunctionsWithNm(libPath, self.logger)
                         self.logger.info("Finished extracting start nodes for library: %s", libraryName)
 
                         #We're going keep a copy of the full library call graph, for later stats creation
@@ -251,23 +267,28 @@ class Piecewise:
                 self.logger.info("Skipping non-library: %s in binary dependencies (can happen because of /proc", libraryName)
 
         for libraryName, libPath in libraryToPathDict.items():
-            if ( ".so" in libPath ):
+            self.logger.debug("createCompleteGraphWithoutBinary: iterating over libName: %s libPath: %s", libraryName, libPath)
+            libPathInAlt = self.existsInAltPath(libraryName, altLibPath)
+            if ( libPathInAlt ):
+                libPath = libPathInAlt#.strip().split("/")[-1]
+            else:
+                self.logger.error("Didn't find library: %s in altpath either. Using library from system or skipping!", libraryName)
+            if ( ".so" in libraryName ):
                 self.logger.info("Checking library: %s", libraryName)
                 libraryFullName = libraryName
-                libraryCfgFileName = self.cleanLib(libraryName) + ".callgraph.out"
-                libraryCfgFilePath = self.cfgPath + "/" + libraryCfgFileName
                 libraryName = self.cleanLib(libraryName)
                 if ( libraryName not in libWithCallgraphSet and libraryName not in libcRelatedList and libraryName not in exceptList ):
                     #altBinaryPath = self.existsInAltPath(libraryName, altLibPath)  #Using the cleaned version causes problem for libapr
-                    altBinaryPath = self.existsInAltPath(libraryFullName, altLibPath)
-                    if ( os.path.isfile(libPath) or altBinaryPath ):
+                    #altBinaryPath = self.existsInAltPath(libraryFullName, altLibPath)
+                    if ( os.path.isfile(libPath) ):#or altBinaryPath ):
                         #We don't have the CFG for this library, all exported functions will be considered as starting nodes in our final graph
                         self.logger.info("The library call graph doesn't exist, considering all imported functions for: %s", libraryName)
-                        path = libPath if os.path.isfile(libPath) else altBinaryPath
-                        self.logger.info("path: %s", path)
-                        libraryProfiler = binaryAnalysis.BinaryAnalysis(path, self.logger)
+                        self.logger.info("libPath: %s", libPath)
+                        libraryProfiler = binaryAnalysis.BinaryAnalysis(libPath, self.logger)
                         directSyscallSet, successCount, failedCount  = libraryProfiler.extractDirectSyscalls()
                         indirectSyscallSet = libraryProfiler.extractIndirectSyscalls(completeGraph)
+                        self.logger.debug("libName: %s directSyscalls: %s", libraryName, str(directSyscallSet))
+                        self.logger.debug("libName: %s indirectSyscalls: %s", libraryName, str(indirectSyscallSet))
 
                         librarySyscalls.update(directSyscallSet)
                         librarySyscalls.update(indirectSyscallSet)
@@ -288,8 +309,8 @@ class Piecewise:
 
         accessibleSyscalls = set()
         for startNode in startNodes:
-            self.logger.debug("Iterating startNode: %s", startNode)
             currentSyscalls = completeGraph.getSyscallFromStartNode(startNode)
+            self.logger.debug("Iterating startNode: %s syscalls: %s", startNode, str(currentSyscalls))
             accessibleSyscalls.update(currentSyscalls)
 
         self.logger.info("Accessible system calls after library specialization: %d, %s", len(accessibleSyscalls), str(accessibleSyscalls))
@@ -306,10 +327,13 @@ class Piecewise:
 
         contents = os.listdir(altLibPath)
 
-        for c in contents:
-            if c.find(libraryName) != -1:
-                self.logger.debug("existsInAltPath returning: %s", (os.path.abspath(altLibPath) + "/" + c))
-                return os.path.abspath(altLibPath) + "/" + c
+        for fileName in contents:
+            cleanedLibName = self.cleanLib(libraryName)
+            cleanedFileName = self.cleanLib(fileName)
+            if ( cleanedLibName == cleanedFileName ):
+            #if c.find(libraryName) != -1:
+                self.logger.debug("existsInAltPath returning: %s", (os.path.abspath(altLibPath) + "/" + fileName))
+                return os.path.abspath(altLibPath) + "/" + fileName
 
         return None
 

@@ -105,9 +105,10 @@ if __name__ == '__main__':
         outputUniqFile = open(options.output + ".uniq", 'w')
         outputSortedFile = open(options.output + ".sorted", 'w')
         outputSortedByDiffFile = open(options.output + ".sortedbydiff", 'w')
+        outputSortedByDirectFile = open(options.output + ".sortedbydirect", 'w')
 
-        libToIndirectSyscalls = dict()
-        libToSpecializedIndirectSyscalls = dict()
+        libToTotalSyscalls = dict()
+        libToSpecializedTotalSyscalls = dict()
         libToSpecBenefit = dict()
         libToDirectSyscalls = dict()
 
@@ -145,9 +146,9 @@ if __name__ == '__main__':
                     if ( not libDirectSyscallSet ):
                         libDirectSyscallSet = set()
 
-                    if ( not libToIndirectSyscalls.get(elfFileNameCleaned, None) or (len(elfSyscalls) > libToIndirectSyscalls[elfFileNameCleaned]) ):
-                        libToIndirectSyscalls[elfFileNameCleaned] = len(elfSyscalls)
-                        libToSpecializedIndirectSyscalls[elfFileNameCleaned] = len(elfSyscallsLibSpec)
+                    if ( not libToTotalSyscalls.get(elfFileNameCleaned, None) or (len(elfSyscalls) > libToTotalSyscalls[elfFileNameCleaned]) ):
+                        libToTotalSyscalls[elfFileNameCleaned] = len(elfSyscalls) + len(libDirectSyscallSet)
+                        libToSpecializedTotalSyscalls[elfFileNameCleaned] = len(elfSyscallsLibSpec) + len(libDirectSyscallSet)
                         libToSpecBenefit[elfFileNameCleaned] = len(elfSyscalls) - len(elfSyscallsLibSpec)
                         libToDirectSyscalls[elfFileNameCleaned] = len(libDirectSyscallSet)
                 
@@ -157,22 +158,22 @@ if __name__ == '__main__':
         outputFile.close()
 
         #2. Generate Unique Output
-        for libName, sycallCount in libToIndirectSyscalls.items():
+        for libName, sycallCount in libToTotalSyscalls.items():
             if ( libName not in libcRelatedList ):
-                elfSyscallsLen = libToIndirectSyscalls[libName]
-                elfSyscallsLibSpecLen = libToSpecializedIndirectSyscalls[libName]
+                elfSyscallsLen = libToTotalSyscalls[libName]
+                elfSyscallsLibSpecLen = libToSpecializedTotalSyscalls[libName]
                 elfSyscallsDiffLen = libToSpecBenefit[libName]
                 libDirectSyscallSetLen = libToDirectSyscalls[libName]
                 outputUniqFile.write(libName + ";" + str(elfSyscallsLen) + ";" + str(elfSyscallsLibSpecLen) + ";" + str(elfSyscallsDiffLen) + ";" + str(libDirectSyscallSetLen) + "\n")
                 outputUniqFile.flush()
         outputUniqFile.close()
 
-        #3. Generated sorted output based on number of indirect syscalls
-        sortedLibToIndirectSyscalls = dict(sorted(libToIndirectSyscalls.items(), key=lambda item: item[1], reverse=True))
-        for libName, sycallCount in sortedLibToIndirectSyscalls.items():
+        #3. Generated sorted output based on number of total syscalls
+        sortedLibToTotalSyscalls = dict(sorted(libToTotalSyscalls.items(), key=lambda item: item[1], reverse=True))
+        for libName, sycallCount in sortedLibToTotalSyscalls.items():
             if ( libName not in libcRelatedList ):
-                elfSyscallsLen = sortedLibToIndirectSyscalls[libName]
-                elfSyscallsLibSpecLen = libToSpecializedIndirectSyscalls[libName]
+                elfSyscallsLen = sortedLibToTotalSyscalls[libName]
+                elfSyscallsLibSpecLen = libToSpecializedTotalSyscalls[libName]
                 elfSyscallsDiffLen = libToSpecBenefit[libName]
                 libDirectSyscallSetLen = libToDirectSyscalls[libName]
                 outputSortedFile.write(libName + ";" + str(elfSyscallsLen) + ";" + str(elfSyscallsLibSpecLen) + ";" + str(elfSyscallsDiffLen) + ";" + str(libDirectSyscallSetLen) + "\n")
@@ -185,11 +186,25 @@ if __name__ == '__main__':
         sortedLibToSpecBenefit = dict(sorted(libToSpecBenefit.items(), key=lambda item: item[1], reverse=True))
         for libName, sycallCount in sortedLibToSpecBenefit.items():
             if ( libName not in libcRelatedList ):
-                elfSyscallsLen = libToIndirectSyscalls[libName]
-                elfSyscallsLibSpecLen = libToSpecializedIndirectSyscalls[libName]
+                elfSyscallsLen = libToTotalSyscalls[libName]
+                elfSyscallsLibSpecLen = libToSpecializedTotalSyscalls[libName]
                 elfSyscallsDiffLen = sortedLibToSpecBenefit[libName]
                 libDirectSyscallSetLen = libToDirectSyscalls[libName]
                 outputSortedByDiffFile.write(libName + ";" + str(elfSyscallsLen) + ";" + str(elfSyscallsLibSpecLen) + ";" + str(elfSyscallsDiffLen) + ";" + str(libDirectSyscallSetLen) + "\n")
                 outputSortedByDiffFile.flush()
 
         outputSortedByDiffFile.close()
+
+
+        #5. Generated sorted output based on number of direct syscall invocations
+        sortedLibToDirectSyscalls = dict(sorted(libToDirectSyscalls.items(), key=lambda item: item[1], reverse=True))
+        for libName, sycallCount in sortedLibToDirectSyscalls.items():
+            #if ( libName not in libcRelatedList ):
+            elfSyscallsLen = libToTotalSyscalls[libName]
+            elfSyscallsLibSpecLen = libToSpecializedTotalSyscalls[libName]
+            elfSyscallsDiffLen = sortedLibToSpecBenefit[libName]
+            libDirectSyscallSetLen = libToDirectSyscalls[libName]
+            outputSortedByDirectFile.write(libName + ";" + str(elfSyscallsLen) + ";" + str(elfSyscallsLibSpecLen) + ";" + str(elfSyscallsDiffLen) + ";" + str(libDirectSyscallSetLen) + "\n")
+            outputSortedByDirectFile.flush()
+
+        outputSortedByDirectFile.close()
