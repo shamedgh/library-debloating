@@ -65,7 +65,7 @@ class Piecewise:
             if ( libPathInAlt ):
                 libPath = libPathInAlt#.strip().split("/")[-1]
             else:
-                self.logger.error("Didn't find library: %s in altpath either. Using system library or skipping!", libraryName)
+                self.logger.debug("Didn't find library: %s in altpath either. Using system library or skipping!", libraryName)
             if ( ".so" in libraryName ):
                 libraryName = self.cleanLib(libraryName)
                 if ( libraryName in libcRelatedList ):
@@ -93,7 +93,7 @@ class Piecewise:
         binaryWithPrefixCfgPath = util.addPrefixToCallgraph(self.binaryCfgPath, binaryName, nonPrefixNodes)
         result = completeGraph.createGraphFromInput(binaryWithPrefixCfgPath)
         if ( result == -1 ):
-            self.logger.error("Failed to create graph for input: %s", binaryWithPrefixCfgPath)
+            self.logger.debug("Failed to create graph for input: %s", binaryWithPrefixCfgPath)
             sys.exit(-1)
         binaryAllNodes = set()
         tempNodes = completeGraph.getAllNodes()
