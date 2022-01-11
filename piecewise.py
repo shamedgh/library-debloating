@@ -107,9 +107,9 @@ class Piecewise:
             if ( libPathInAlt ):
                 libPath = libPathInAlt#.strip().split("/")[-1]
             else:
-                self.logger.error("Didn't find library: %s in altpath either. Using system library or skipping!", libraryName)
+                self.logger.debug("Didn't find library: %s in altpath either. Using system library or skipping!", libraryName)
             if ( ".so" in libraryName ):
-                self.logger.info("Checking library: %s with path: %s", libraryName, libPath)
+                self.logger.debug("Checking library: %s with path: %s", libraryName, libPath)
                 libraryFullName = libraryName
                 libraryCfgVersionedFileName = libraryFullName + ".callgraph.out"
                 libraryCfgVersionedFilePath = self.cfgPath + "/" + libraryCfgVersionedFileName
@@ -124,7 +124,7 @@ class Piecewise:
                             separator = ":"
 
                         libWithCallgraphSet.add(libraryName)
-                        self.logger.info("The library call graph exists for: %s", libraryName)
+                        self.logger.debug("The library call graph exists for: %s", libraryName)
 
                         #We will generate the library callgraph by itself to extract leaf nodes (should not add prefix to them)
                         libraryGraphTemp = graph.Graph(self.logger)
@@ -144,14 +144,14 @@ class Piecewise:
                         self.logger.debug("Finished adding prefix to library functions: %s", libraryName)
                         completeGraph.createGraphFromInput(libraryWithPrefixCfgFilePath, separator)
                         graphTotalNodes = completeGraph.getNodeCount()
-                        self.logger.info("Finished adding library: %s to complete graph, total nodes: %d", libraryName, graphTotalNodes)
+                        self.logger.debug("Finished adding library: %s to complete graph, total nodes: %d", libraryName, graphTotalNodes)
 
                     else:
-                        self.logger.warning("Skipping library: %s because down't have callgraph: %s", libraryName, libraryCfgFilePath)
+                        self.logger.debug("Skipping library: %s because down't have callgraph: %s", libraryName, libraryCfgFilePath)
                 else:
-                    self.logger.info("Skipping except list library: %s", libraryName)
+                    self.logger.debug("Skipping except list library: %s", libraryName)
             else:
-                self.logger.info("Skipping non-library: %s in binary dependencies (can happen because of /proc", libraryName)
+                self.logger.debug("Skipping non-library: %s in binary dependencies (can happen because of /proc", libraryName)
 
         for libraryName, libPath in libraryToPathDict.items():
             self.logger.debug("createCompleteGraph: iterating over libName: %s libPath: %s", libraryName, libPath)
@@ -167,8 +167,8 @@ class Piecewise:
                 if ( libraryName not in libWithCallgraphSet and libraryName not in libcRelatedList and libraryName not in exceptList ):
                     if ( os.path.isfile(libPath) ):#or altBinaryPath ):
                         #We don't have the CFG for this library, all exported functions will be considered as starting nodes in our final graph
-                        self.logger.info("The library call graph doesn't exist, considering all imported functions for: %s", libraryName)
-                        self.logger.info("libPath: %s", libPath)
+                        self.logger.debug("The library call graph doesn't exist, considering all imported functions for: %s", libraryName)
+                        self.logger.debug("libPath: %s", libPath)
                         libraryProfiler = binaryAnalysis.BinaryAnalysis(libPath, self.logger)
                         directSyscallSet, successCount, failedCount  = libraryProfiler.extractDirectSyscalls()
                         indirectSyscallSet = libraryProfiler.extractIndirectSyscalls(completeGraph)
@@ -178,11 +178,11 @@ class Piecewise:
                         librarySyscalls.update(directSyscallSet)
                         librarySyscalls.update(indirectSyscallSet)
                     else:
-                        self.logger.warning("Skipping library: %s because path: %s doesn't exist", libraryName, libPath)
+                        self.logger.debug("Skipping library: %s because path: %s doesn't exist", libraryName, libPath)
                 else:
-                    self.logger.info("Skipping except list or with-callgraph library: %s", libraryName)
+                    self.logger.debug("Skipping except list or with-callgraph library: %s", libraryName)
             else:
-                self.logger.info("Skipping non-library: %s in binary dependencies (can happen because of /proc", libraryName)
+                self.logger.debug("Skipping non-library: %s in binary dependencies (can happen because of /proc", libraryName)
 
         return completeGraph, librarySyscalls, libraryToFuncDict, binaryAllNodes
 
@@ -267,7 +267,7 @@ class Piecewise:
                     if ( libraryName == "libssl" and function in libraryFuncs ):
                         self.logger.debug("adding function %s to library: %s", function, libraryPrefix)
             libraryToVisitedFuncs[libraryName] = libraryVisitedSet
-            self.logger.info("visited nodes per library: %s: %d", libraryName, len(libraryVisitedSet))
+            self.logger.debug("visited nodes per library: %s: %d", libraryName, len(libraryVisitedSet))
         binaryVisitedFuncs = set()
         binaryName = self.binaryPath
         if ( "/" in binaryName ):
@@ -277,7 +277,7 @@ class Piecewise:
                 if ( function.startswith(binaryName + ".") ):
                     function = function.replace(binaryName + ".", "")
                 if ( function.startswith("libc.") ):
-                    self.logger.warning("function starts with libc. in binary nodes: %s", function)
+                    self.logger.debug("function starts with libc. in binary nodes: %s", function)
                 binaryVisitedFuncs.add(function)
 
 
