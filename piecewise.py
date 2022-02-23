@@ -27,7 +27,8 @@ class Piecewise:
     def cleanLib(self, libName):
         self.logger.debug("cleanLib libName input: %s", libName)
         if ( ".so" in libName ):
-            libName = re.sub("-.*so",".so",libName)
+            #libName = re.sub("-.*so",".so",libName)
+            libName = re.sub("-[0-9][0-9.]*\.so",".so",libName)
             libName = libName[:libName.index(".so")]
             #libName = libName + ".so"
         self.logger.debug("cleanLib libName output: %s", libName)
