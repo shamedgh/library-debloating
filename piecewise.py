@@ -42,6 +42,28 @@ class Piecewise:
         libcRelatedList = ["ld", "libc", "libdl", "libcrypt", "libnss_compat", "libnsl", "libnss_files", "libnss_nis", "libpthread", "libm", "libresolv", "librt", "libutil", "libnss_dns"]
 
     def createCompleteGraph(self, exceptList=list(), altLibPath=None):
+        cacheFilePath = "/tmp/"
+
+        binaryName = self.binaryPath
+        if ( "/" in binaryName ):
+            binaryName = binaryName[binaryName.rindex('/')+1:]
+
+        graphCache = cacheFilePath + "." + binaryName + ".graph"
+        libSyscallCache = cacheFilePath + "." + binaryName + ".libsyscall"
+        libToFuncCache = cacheFilePath + "." + binaryName + ".libtofunc"
+        binNodesCache = cacheFilePath + "." + binaryName + ".binnodes"
+
+        if ( os.path.isfile(graphCache) and 
+             os.path.isfile(libSyscallCache) and
+             os.path.isfile(libToFuncCache) and
+             os.path.isfile(binNodesCache) ):
+            completeGraph = util.readDictFromFileWithPickle(graphCache)
+            librarySyscalls = util.readDictFromFileWithPickle(libSyscallCache)
+            libraryToFuncDict = util.readDictFromFileWithPickle(libToFuncCache)
+            binaryAllNodes = util.readDictFromFileWithPickle(binNodesCache)
+            return completeGraph, librarySyscalls, libraryToFuncDict, binaryAllNodes
+            
+
         '''TODO
         1. Extract required libraries from binary (ldd)
         2. Find call graph for each library from specified folder (input: callgraph folder)
@@ -81,9 +103,6 @@ class Piecewise:
         #libcGraph.createGraphFromInput(self.libcCfgPath, self.libcSeparator)
 
         completeGraph = graph.Graph(self.logger)
-        binaryName = self.binaryPath
-        if ( "/" in binaryName ):
-            binaryName = binaryName[binaryName.rindex('/')+1:]
         binaryGraphTemp = graph.Graph(self.logger)
         binaryGraphTemp.createGraphFromInput(self.binaryCfgPath)
         binaryLeafNodes = binaryGraphTemp.getAllLeafNodes()
@@ -183,6 +202,11 @@ class Piecewise:
                     self.logger.debug("Skipping except list or with-callgraph library: %s", libraryName)
             else:
                 self.logger.debug("Skipping non-library: %s in binary dependencies (can happen because of /proc", libraryName)
+
+        util.writeDictToFileWithPickle(completeGraph, graphCache)
+        util.writeDictToFileWithPickle(librarySyscalls, libSyscallCache)
+        util.writeDictToFileWithPickle(libraryToFuncDict, libToFuncCache)
+        util.writeDictToFileWithPickle(binaryAllNodes, binNodesCache)
 
         return completeGraph, librarySyscalls, libraryToFuncDict, binaryAllNodes
 
