@@ -9,7 +9,7 @@ import graph
 import binaryAnalysis
 
 class Piecewise:
-    libcStartNodes = ['_start', '__libc_start_main', '__libc_csu_init', 'preinit_array_start', '_init', '_dl_start', '_dl_start_final', '_dl_sysdep_start', '__mach_init', '_hurd_startup', 'dl_main', '_dl_allocate_tls_init', '_dl_start_user', '_dl_init_first', '_dl_start_user', '__poll', '__statfs']
+    libcStartNodes = ['_start', '__libc_start_main', '__libc_csu_init', 'preinit_array_start', '_init', '_dl_start', '_dl_start_final', '_dl_sysdep_start', '__mach_init', '_hurd_startup', 'dl_main', '_dl_allocate_tls_init', '_dl_start_user', '_dl_init_first', '_dl_start_user', '__poll', '__statfs', '__sendmmsg']
     # temporarily adding statfs and poll for libresolv and libpthread requirement -
     #   pthread: should be fixed in callgraph
     #   libresolv: should be provided because it is dlopened by glibc
